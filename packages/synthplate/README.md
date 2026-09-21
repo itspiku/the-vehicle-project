@@ -1,6 +1,6 @@
 # synthplate
 
-Synthetic Nepali number plate generation for [TheScanner](https://github.com/itspiku/the-vehicle-project).
+Synthetic Nepali number plate generation for [The Vehicle Project](https://github.com/itspiku/the-vehicle-project).
 
 All public Nepali plate data amounts to roughly 5,000 images, heavily skewed to
 daylight photographs of private motorcycles in one zone. That is not enough to

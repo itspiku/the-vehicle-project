@@ -1,6 +1,6 @@
 # scanner-models
 
-The neural half of [TheScanner](https://github.com/itspiku/the-vehicle-project).
+The neural half of [The Vehicle Project](https://github.com/itspiku/the-vehicle-project).
 
 One model, three heads:
 

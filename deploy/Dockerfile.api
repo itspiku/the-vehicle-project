@@ -18,7 +18,7 @@ RUN python -m build --wheel --outdir /wheels packages/nepal_plate \
  && python -m build --wheel --outdir /wheels services/api
 
 FROM python:3.12-slim
-LABEL org.opencontainers.image.title="TheScanner platform API" \
+LABEL org.opencontainers.image.title="The Vehicle Project platform API" \
       org.opencontainers.image.licenses="Apache-2.0"
 
 # Never run as root. A container that ingests data from field devices is the

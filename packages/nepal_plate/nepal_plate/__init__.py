@@ -1,4 +1,4 @@
-"""``nepal_plate`` -- the domain core of TheScanner.
+"""``nepal_plate`` -- the domain core of The Vehicle Project.
 
 A dependency-free (standard library only) model of Nepali vehicle registration
 plates: the reference data, the layout grammars for both of Nepal's coexisting

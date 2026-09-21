@@ -1,6 +1,6 @@
 # scanner-web
 
-The operator console for [TheScanner](https://github.com/itspiku/the-vehicle-project).
+The operator console for [The Vehicle Project](https://github.com/itspiku/the-vehicle-project).
 
 React + TypeScript + Vite. **Nepali by default**, English on a toggle.
 

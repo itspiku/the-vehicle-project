@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "scanner-api"
 version = "0.1.0"
-description = "TheScanner platform: signed-read ingest, watch-list screening, investigation search, retention and erasure."
+description = "The Vehicle Project platform: signed-read ingest, watch-list screening, investigation search, retention and erasure."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

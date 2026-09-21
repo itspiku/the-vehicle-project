@@ -1,6 +1,6 @@
 # scanner-api
 
-The platform for [TheScanner](https://github.com/itspiku/the-vehicle-project) — the Screen
+The platform for [The Vehicle Project](https://github.com/itspiku/the-vehicle-project) — the Screen
 and Exploit stages of **Edge → Ingest → Screen → Exploit**.
 
 Accepts signed reads from edge nodes, verifies them, matches against watch-lists,

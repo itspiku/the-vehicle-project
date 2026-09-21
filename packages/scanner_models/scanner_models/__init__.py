@@ -1,4 +1,4 @@
-"""``scanner_models`` -- the neural half of TheScanner.
+"""``scanner_models`` -- the neural half of The Vehicle Project.
 
 One multi-task recogniser: a shared convolutional + recurrent trunk with three
 heads -- CTC over a unified 71-token dual-script vocabulary, a 7-way plate

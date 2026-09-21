@@ -160,7 +160,7 @@ def create_app(
         db.dispose()
 
     app = FastAPI(
-        title="TheScanner platform API",
+        title="The Vehicle Project platform API",
         version="0.1.0",
         summary="Vehicle movement intelligence for Nepal",
         lifespan=lifespan,

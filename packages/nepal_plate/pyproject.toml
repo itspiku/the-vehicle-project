@@ -9,7 +9,7 @@ description = "Domain core for Nepali vehicle registration plates: reference dat
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-authors = [{ name = "TheScanner contributors" }]
+authors = [{ name = "The Vehicle Project contributors" }]
 keywords = ["anpr", "alpr", "nepal", "licence-plate", "devanagari", "ctc"]
 classifiers = [
   "Development Status :: 3 - Alpha",

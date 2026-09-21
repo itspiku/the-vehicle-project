@@ -40,7 +40,7 @@ class CameraConfig:
 class NodeConfig:
     node_id: str
     cameras: tuple[CameraConfig, ...]
-    data_dir: Path = Path("/var/lib/thescanner")
+    data_dir: Path = Path("/var/lib/the-vehicle-project")
     key_path: Path | None = None
     model_path: Path | None = None       # recogniser ONNX
     detector_path: Path | None = None    # detector ONNX; motion fallback if absent
@@ -130,7 +130,7 @@ def load(path: str | Path) -> NodeConfig:
     return NodeConfig(
         node_id=node_id,
         cameras=tuple(cameras),
-        data_dir=Path(raw.get("data_dir", "/var/lib/thescanner")),
+        data_dir=Path(raw.get("data_dir", "/var/lib/the-vehicle-project")),
         key_path=Path(raw["key_path"]) if raw.get("key_path") else None,
         model_path=Path(raw["model_path"]) if raw.get("model_path") else None,
         detector_path=Path(raw["detector_path"]) if raw.get("detector_path") else None,
@@ -143,22 +143,22 @@ def load(path: str | Path) -> NodeConfig:
 
 
 EXAMPLE_CONFIG = """\
-# TheScanner edge node configuration
+# The Vehicle Project edge node configuration
 #
 # One file per node. A node runs one or more cameras; each camera may define
 # zones whose entry and exit are recorded.
 
 node_id: KTM-BAL-01
 site_id: balkumari-junction
-data_dir: /var/lib/thescanner
+data_dir: /var/lib/the-vehicle-project
 
 # Recogniser, exported with `python -m scanner_models.export`.
-model_path: /opt/thescanner/models/platenet.onnx
+model_path: /opt/the-vehicle-project/models/platenet.onnx
 
 # Optional. Any Apache-2.0 detector exported to ONNX (D-FINE, RT-DETRv2, DEIM).
 # If omitted the node falls back to motion detection, which is adequate for a
 # fixed camera but is a bootstrap rather than the production path.
-# detector_path: /opt/thescanner/models/detector.onnx
+# detector_path: /opt/the-vehicle-project/models/detector.onnx
 
 platform_url: https://scanner.example.gov.np
 platform_token: ${SCANNER_NODE_TOKEN}

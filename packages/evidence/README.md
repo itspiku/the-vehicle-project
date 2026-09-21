@@ -1,7 +1,7 @@
 # scanner-evidence
 
 Tamper-evident, signed event chains for
-[TheScanner](https://github.com/itspiku/the-vehicle-project).
+[The Vehicle Project](https://github.com/itspiku/the-vehicle-project).
 
 Reads produced by this system may end up as evidence in a prosecution, which
 imposes requirements ordinary telemetry does not have: it must be possible to

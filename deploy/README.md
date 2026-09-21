@@ -74,17 +74,17 @@ make one survivable.
 Nodes are not part of this compose file — they run on hardware at the roadside.
 
 ```bash
-docker build -f deploy/Dockerfile.edge -t thescanner-edge .
+docker build -f deploy/Dockerfile.edge -t the-vehicle-project-edge .
 ```
 
 ```bash
 scanner-edge init --out node.yaml
 ```
 
-Then on the node, with `/var/lib/thescanner` on a **persistent volume**:
+Then on the node, with `/var/lib/the-vehicle-project` on a **persistent volume**:
 
 ```bash
-docker run -d --restart unless-stopped -v /var/lib/thescanner:/var/lib/thescanner -v /etc/thescanner:/etc/thescanner:ro thescanner-edge
+docker run -d --restart unless-stopped -v /var/lib/the-vehicle-project:/var/lib/the-vehicle-project -v /etc/the-vehicle-project:/etc/the-vehicle-project:ro the-vehicle-project-edge
 ```
 
 That volume holds the node's signing key and its store-and-forward queue.

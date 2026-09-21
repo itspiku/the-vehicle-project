@@ -1,6 +1,6 @@
 # scanner-edge
 
-The edge agent for [TheScanner](https://github.com/itspiku/the-vehicle-project). Runs on a
+The edge agent for [The Vehicle Project](https://github.com/itspiku/the-vehicle-project). Runs on a
 box at the roadside.
 
 ```

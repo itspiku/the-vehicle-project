@@ -15,7 +15,7 @@ export type Lang = "ne" | "en";
 
 const STRINGS = {
   // Chrome
-  "app.title": { en: "TheScanner", ne: "द स्क्यानर" },
+  "app.title": { en: "The Vehicle Project", ne: "द भेहिकल प्रोजेक्ट" },
   "app.subtitle": {
     en: "Vehicle movement intelligence",
     ne: "सवारी साधन आवागमन प्रणाली",

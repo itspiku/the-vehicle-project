@@ -1,6 +1,6 @@
 # nepal-plate
 
-The domain core of [TheScanner](https://github.com/itspiku/the-vehicle-project): a
+The domain core of [The Vehicle Project](https://github.com/itspiku/the-vehicle-project): a
 dependency-free model of Nepali vehicle registration plates.
 
 Nepal runs two incompatible plate systems side by side — legacy Devanagari

@@ -140,7 +140,7 @@ that all public Nepali plate data amounts to roughly five thousand images
 
 ## 3. The gap, and what this project does about it
 
-| Gap in existing work | What TheScanner does |
+| Gap in existing work | What The Vehicle Project does |
 |---|---|
 | Devanagari *or* embossed | One recogniser, 71-token unified vocabulary, both grammars, automatic routing by plate colour |
 | Regex applied after argmax | **Grammar-constrained CTC beam search** — the decoder emits a well-formed, field-decomposed plate or an explicit refusal, never a bare string. Measured: this does *not* improve accuracy (+0.001), but 10.0% of greedy reads are not legal plates at all and cannot serve as a watch-list key. See [findings-phase2.md](findings-phase2.md) |

@@ -1,4 +1,4 @@
-# TheScanner — delivery plan
+# The Vehicle Project: delivery plan
 
 A production ANPR and vehicle-movement system for Nepal: reads both Nepali plate
 systems from road cameras, records when a vehicle entered and left a zone, and

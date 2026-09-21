@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "scanner-evidence"
 version = "0.1.0"
-description = "Tamper-evident, signed event chains shared by TheScanner's edge agent and platform."
+description = "Tamper-evident, signed event chains shared by The Vehicle Project's edge agent and platform."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }

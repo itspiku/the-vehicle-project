@@ -15,7 +15,7 @@
 # SCANNER_PLATE_KEY in particular can never change once data exists: every
 # stored plate is indexed by its HMAC, so a new key orphans the entire history.
 
-name: thescanner
+name: the-vehicle-project
 
 services:
   db:

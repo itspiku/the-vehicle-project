@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "scanner-edge"
 version = "0.1.0"
-description = "TheScanner edge agent: camera to signed, queued plate reads with zone entry/exit sessions."
+description = "The Vehicle Project edge agent: camera to signed, queued plate reads with zone entry/exit sessions."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
