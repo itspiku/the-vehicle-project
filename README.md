@@ -1,166 +1,229 @@
 # TheScanner
 
-**Vehicle movement intelligence for Nepal.** Cameras on the road; every vehicle
-identified, its plate read, its entry and exit from a zone recorded — on
-hardware a municipality can afford, under Nepali privacy law, with the data
-staying in the country.
+**Vehicle movement intelligence for Nepal.**
 
-> **Status: end-to-end, on synthetic data.** The full path works — synthetic
-> plate → trained recogniser → edge agent → signed queue → platform → operator
-> console — and is verified by an end-to-end test and a runnable demo. What has
-> *not* happened is the part that decides whether any of it is good: **no real
-> Nepali road imagery has been evaluated**, because the benchmark to do it with
-> does not exist yet and has to be collected (Phase 1.7).
-> [`docs/PLAN.md`](docs/PLAN.md) carries the honest status of every item.
+A camera on a pole. A vehicle passes. Seconds later its number plate has been
+read, its arrival logged, and — if it is on a watch-list — someone has been
+told. All of it on hardware a municipality can afford, under Nepali privacy law,
+with the data never leaving the country.
+
+[![CI](https://github.com/itspiku/the-vehicle-project/actions/workflows/ci.yml/badge.svg)](https://github.com/itspiku/the-vehicle-project/actions/workflows/ci.yml)
+[![Licence](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
 
 ---
 
-## The problem, stated precisely
+## In one minute
 
-Nepal runs **two incompatible plate systems at the same time**, and will for
-years:
+Here is what happens when a vehicle drives past a TheScanner camera.
 
-- **Legacy zonal plates** — Devanagari script, `बा १ च १२३४`, colour-coded by
-  ownership (red = private, black = public, green = tourist, …). Still the
-  majority of vehicles.
-- **Embossed plates** — Latin FE-Schrift, `3 B PA 1234`, uniformly
-  black-on-white, RFID chip. Rolling out since 2020.
+**1 — It is noticed.** A small computer on the pole spots the vehicle and
+follows it across the frame.
 
-Nearly every published Nepali ANPR handles one or the other. A system meant for
-real roads has to handle both, and must never apply one system's rules to the
-other's plate.
+**2 — It is read, carefully.** The camera gets ten to forty looks at the plate
+as the vehicle passes. Rather than trusting any single blurry frame, the system
+combines the evidence from all of them — the way you would squint at a distant
+sign and let your eyes settle.
 
----
+**3 — One record is made, and signed.** Plate, time, camera, and how confident
+the system is. Not a video stream — a single, cryptographically signed record per
+vehicle, so it can later be proven that this camera produced it and nobody has
+altered it since.
 
-## What makes this different
+**4 — It waits if it has to.** If the internet link is down — load-shedding,
+a cut cable, a monsoon — the record sits safely on the pole and is sent when
+the link returns. Nothing is lost.
 
-### 1. The decoder emits plates, not strings
+**5 — It is checked.** At the control room the record is verified, matched
+against watch-lists, and stored with an expiry date already attached.
 
-Conventional ANPR takes the argmax of an OCR model and cleans it up with a
-regex. TheScanner runs CTC beam search where every beam carries a state in a
-finite-state grammar of Nepali plate layouts, so the decoder can only produce
-a well-formed plate — decomposed into zone, lot, class and serial, with
-ownership derived — or an explicit refusal.
+**6 — Looking it up has a cost.** An investigator who wants to see where a
+vehicle has been must type a reason first. That reason is logged permanently
+against their name, and only an auditor can read that log.
 
-**This does not improve accuracy, and we measured that carefully rather than
-assuming it.** Against greedy decoding it is worth +0.001, and no more than
-+0.002 even under heavy distribution shift. The reason is instructive: a model
-trained only on legal plates has already internalised the grammar, leaving just
-3.1 × 10⁻³ of its probability mass on illegal tokens. There is nothing for the
-constraint to redistribute. The full write-up is in
-[`docs/research/findings-phase2.md`](docs/research/findings-phase2.md).
-
-What it *is* worth is well-formedness. **10.0% of greedy reads are not legal
-plates at all** — they cannot be a watch-list key, a typed database column, or a
-registry lookup. And the grammar is what makes confidence bands meaningful:
-HIGH reads are 97.8% accurate, REJECT reads 0%. A flat string cannot tell you
-which of those it is.
-
-### 2. Plate colour is used as a decoding prior — with an honest caveat
-
-Legacy Nepali plates encode ownership **twice**: in the background colour *and*
-in the class letter. Colour is a large-area, low-frequency cue that survives
-blur far better than glyph shape, so a red plate restricts the class letter to
-क / च / प. The mechanism works and is unit-tested directly.
-
-**On a trained model it changes 0.5% of reads and nets nothing.** The
-recogniser's mean top-1-minus-top-2 margin per glyph is 0.927 — it is already
-near-certain, and a prior can only break ties. The colour head is retained at
-97.9% accuracy because ownership class is useful in its own right, and because
-colour–class disagreement is a genuine signal for an altered plate.
-
-### 3. A read is an estimate over a track, not a guess from a frame
-
-A camera gets ten to forty looks at a vehicle, each with independent blur,
-angle and lighting. The information needed to read a plate is usually present
-across the set even when no single frame carries it — which is why the
-[ICPR 2026 low-resolution benchmark](https://arxiv.org/abs/2604.22506) is built
-from tracks rather than images.
-
-Fusion here is **per-field**, not per-string: if the zone is legible in frame 3
-and the serial in frame 11, whole-string voting discards both partial reads
-while field-level voting keeps them. The assembled consensus is then
-re-validated against the grammar, so it can never be a plate that could not
-exist.
-
-### 4. Built for the deployment that actually exists
-
-Kathmandu Valley Traffic Police already run ANPR — six proprietary cameras
-feeding a 297-camera control room, with expansion to ~170 sites planned. The gap
-is not "can it be done" but "can it be done at a hundred sites on a Nepali
-public budget". Hence: edge-first, commodity hardware, permissive licences only,
-one database instead of three, and store-and-forward queues so a site keeps
-working through a power cut.
-
-### 5. Government-grade means auditable, not just encrypted
-
-Hash-chained append-only read log with per-node Ed25519 signatures, so a read
-can be defended in court. Mandatory reason-for-access logging. Automatic
-retention expiry and erasure under Nepal's Privacy Act 2075. Face recognition is
-deliberately **out of scope** — see
-[`docs/security-and-privacy.md`](docs/security-and-privacy.md).
+That is the whole system. Everything below is detail.
 
 ---
 
-## Repository layout
+## Why Nepal needs its own
+
+Most number-plate software is built for countries with one plate design. Nepal
+has **two, at the same time**, and will for years:
+
+| | Legacy plates | Embossed plates |
+|---|---|---|
+| Looks like | `बा १ च १२३४` | `3 B PA 1234` |
+| Script | Devanagari | Latin |
+| Colour | **Says who owns it** — red for private, black for public, green for tourist, blue for diplomatic… | Always black on white |
+| On the road since | Decades | 2020 |
+| Share of vehicles today | The majority | Growing |
+
+Almost every existing Nepali plate reader handles one or the other. A system for
+real Nepali roads has to read both — and must never apply one system's rules to
+the other's plate. That constraint shaped everything here, from the way plates
+are described to the way the reader is trained.
+
+---
+
+## What it promises
+
+These are design commitments, not settings someone can switch off.
+
+| | |
+|---|---|
+| **Reads both plate systems** | Devanagari and embossed Latin, in one model, with the layout rules of each built in. |
+| **Keeps working offline** | Each camera site stores its own records and forwards them when it can. A power cut costs delay, never evidence. |
+| **Every record is provable** | Signed at the camera, chained to the record before it. Alter or delete one and the chain breaks — visibly, and at a known point. |
+| **Every lookup needs a reason** | No one can browse. Searches require a written purpose, logged before the query runs, readable only by auditors. |
+| **Data expires on its own** | Every record carries its own deletion date. Whether deletion is actually happening is a simple query, not a matter of trust. |
+| **Faces are blurred, never recognised** | Faces are detected only in order to be blurred, at the camera, before anything is stored. Face recognition is deliberately out of scope. |
+| **Nothing leaves Nepal** | No cloud services, no external map or font providers, no third-party analytics. Self-hosted end to end. |
+| **A human decides** | The system produces evidence. No fine is issued on a machine reading alone, and low-confidence reads go to a person for review. |
+
+---
+
+## Where it stands
+
+**Honestly: it works end to end, on synthetic data, and has not yet seen a real
+Nepali road.**
+
+The full path — synthetic plate → trained reader → camera software → signed
+queue → platform → operator console — is built, tested, and demonstrated. On a
+held-out set of 2,000 synthetic plates the reader gets **83.6%** exactly right,
+identifies plate colour **97.9%** of the time, and reaches **98.5%** on plates
+wider than 130 pixels.
+
+What has *not* happened is the part that decides whether any of that is good.
+No real Nepali footage has been evaluated, because the dataset to evaluate with
+does not exist and has to be collected under proper legal authorisation. Until
+then every number here is an **upper bound**, not a forecast.
+
+Two known shortfalls, stated rather than hidden:
+
+- When the system says **HIGH confidence**, it is wrong **2.2%** of the time. The
+  target is 0.5%. That gap matters more than any headline accuracy, because a
+  confident wrong answer is what puts the wrong person in front of a magistrate.
+- Single-row plates read at **70.2%** against two-row plates' **94.9%**. The
+  cause is only partly understood and is recorded as unresolved.
+
+For calibration: the winning entry in the 2026 international low-resolution
+plate-reading competition scored 82.13%. Be suspicious of any system claiming
+99% on blurry footage — this one included.
+
+Every item's status lives in [`docs/PLAN.md`](docs/PLAN.md).
+
+---
+
+# For developers
+
+## Architecture
+
+Four stages, borrowed in shape from the UK's national ANPR platform and scaled
+down two orders of magnitude for Nepal's realistic volume — single-digit
+millions of reads per day nationally, not hundreds of millions.
+
+```
+ ┌── CAMERA SITE ──────────────────────────────────────────────────┐
+ │                                                                  │
+ │   RTSP ─▶ detect ─▶ track ─▶ select crops ─▶ recognise ─▶ fuse  │
+ │                                                    │             │
+ │              face blur ◀───────────────────────────┘             │
+ │                  │                                               │
+ │                  ▼                                               │
+ │        zone entry / exit  ─▶  signed, hash-chained queue         │
+ │                                (SQLite WAL, survives restart)    │
+ └──────────────────────────────────────┬───────────────────────────┘
+                                        │  intermittent link
+                             ┌──────────▼──────────┐
+                             │  INGEST             │  verify signature, idempotent
+                             ├─────────────────────┤
+                             │  SCREEN             │  watch-lists, cloned-plate checks
+                             ├─────────────────────┤
+                             │  EXPLOIT            │  PostgreSQL + TimescaleDB + pgvector
+                             │  API · console      │  MinIO for imagery
+                             └─────────────────────┘
+```
+
+**Decisions worth knowing about**
+
+- **One read per passage, not per frame.** The edge fuses across the whole
+  track and emits once. This is what keeps national volume in the millions.
+- **One database, not three.** Postgres carries relational data, the read
+  time-series (TimescaleDB hypertable) and appearance vectors (pgvector). Three
+  stores would be three things to operate, back up and staff.
+- **The same schema runs on SQLite.** The whole test suite needs no
+  infrastructure. Every Postgres-only feature is a performance feature.
+- **No SQL in the HTTP layer.** Every route delegates to an audited query
+  layer, so an endpoint cannot read personal data unaudited — it has no way to
+  query at all.
+- **Permissive licences only, enforced in CI.** An AGPL dependency is a build
+  failure: a copyleft obligation is a procurement blocker for a government.
+
+Full design: [`docs/architecture.md`](docs/architecture.md).
+
+## Repository map
 
 ```
 packages/
-  nepal_plate/     domain core — spec, grammars, decoder, fusion (zero deps)
-  evidence/        signed, hash-chained events (shared by edge and platform)
-  synthplate/      synthetic plate renderer, degradation, track synthesis
-  scanner_models/  multi-task recogniser: CTC + colour + quality
+  nepal_plate/     domain core: plate spec, layout grammars, decoder, fusion (zero deps)
+  evidence/        Ed25519-signed, hash-chained events (shared by edge and platform)
+  synthplate/      synthetic plate renderer, physics-ordered degradation, track synthesis
+  scanner_models/  one-trunk / three-head recogniser: CTC + colour + quality (1.9 M params)
 services/
-  edge/            RTSP → detect → track → select → recognise → fuse → queue
-  api/             ingest, screening, search, retention, erasure
-  web/             operator console (Nepali/English)
-deploy/            Compose + Dockerfiles for the single-site tier
+  edge/            camera agent: detect, ByteTrack, crop selection, fuse, zones, queue, uplink
+  api/             FastAPI platform: ingest, screening, audited search, retention, erasure
+  web/             operator console: React + TypeScript, Nepali by default
+deploy/            Docker Compose + Dockerfiles for the single-site tier
 scripts/
-  seed_demo.py     build a working demo through the real path
+  seed_demo.py     build a runnable demo through the real pipeline
 docs/
-  PLAN.md          phased delivery plan, with honest per-item status
-  architecture.md  system design
-  security-and-privacy.md
-  research/        plate spec, prior art, datasets, Phase 2 findings
+  PLAN.md          delivery plan with per-item status
+  research/        plate specification, prior art, datasets, Phase 2 findings
 ```
-
-Everything above is built and tested: **160 tests** across five Python packages
-plus a typechecked TypeScript console. What is *not* done — a trained detector,
-a real evaluation benchmark, authentic plate typefaces, PostgreSQL verification,
-load testing — is listed per item in [`docs/PLAN.md`](docs/PLAN.md).
-
----
 
 ## Quickstart
 
+Install everything in dependency order:
+
 ```bash
-pip install -e packages/nepal_plate -e packages/evidence -e packages/synthplate             -e packages/scanner_models -e services/edge -e services/api
+pip install -e packages/nepal_plate -e packages/evidence -e packages/synthplate -e packages/scanner_models -e services/edge -e services/api
 ```
+
+Run the suite (160 tests, no infrastructure needed):
 
 ```bash
 python -m pytest packages services -q
 ```
 
-See the whole system running, with data generated through the real pipeline:
+See the whole system running with data generated through the real pipeline
+— four cameras, 400 reads, zone sessions, a watch-list hit, four user roles:
 
 ```bash
 python scripts/seed_demo.py --out demo --reads 400
 ```
 
-Generate synthetic plates and eyeball them:
+Start the platform against the seeded database (the seeder prints these values):
+
+```bash
+SCANNER_DB_URL=sqlite:///demo/scanner.db SCANNER_PLATE_KEY=$(python -c "print('d'*64)") SCANNER_TOKEN_SECRET=$(python -c "print('s'*64)") scanner-api serve
+```
+
+Start the console, then open http://localhost:5173 and sign in as
+`investigator` / `demo-password-123`:
+
+```bash
+npm --prefix services/web install && npm --prefix services/web run dev
+```
+
+Generate synthetic plates and look at them:
 
 ```bash
 python -m synthplate.cli preview --out preview.png --rows 6 --cols 6
 ```
 
-Build a corpus (images + JSONL labels + a reproducibility manifest):
-
-```bash
-python -m synthplate.cli generate --out data/synth --count 200000 --seed 1
-```
+Use the domain core directly:
 
 ```python
-from nepal_plate import parse, decode, ColourEvidence, PlateColour
+from nepal_plate import parse
 
 p = parse("बा १ च १२३४")
 p.canonical    # 'NP-L:BA-1-CHA-1234'
@@ -168,36 +231,17 @@ p.ownership    # Ownership.PRIVATE
 p.size_class   # SizeClass.LIGHT
 
 # Every spelling of a plate must produce the same key, or watch-list
-# matching silently fails.
+# matching silently fails. This is the most common way national ANPR
+# systems break, and it is tested end to end.
 parse("BA 1 CHA 1234").canonical == p.canonical   # True
-
-# Decode from recogniser output, with a colour prior.
-red = ColourEvidence({PlateColour.RED_WHITE: 0.88})
-decode(log_probs, colour=red)[0].plate.display
 ```
-
----
-
-## Documentation
-
-| | |
-|---|---|
-| [Delivery plan](docs/PLAN.md) | Phases, deliverables, acceptance criteria, risks, open questions |
-| [Architecture](docs/architecture.md) | Edge → Ingest → Screen → Exploit |
-| [Plate specification](docs/research/plate-specification.md) | Both systems, in full, with sources |
-| [Prior art](docs/research/prior-art.md) | What exists in Nepal and globally, and where the gap is |
-| [Dataset survey](docs/research/datasets.md) | What public data exists (not much) and the strategy |
-| [Phase 2 findings](docs/research/findings-phase2.md) | The ablation that disproved this project's headline claim, and what the mechanisms are actually worth |
-| [Security & privacy](docs/security-and-privacy.md) | Threat model, Privacy Act 2075 compliance |
-
----
 
 ## Measured results
 
-A 1.93 M-parameter recogniser trained for 20 epochs on 50,000 synthetic plates,
-scored on a 2,000-sample held-out split:
+`PlateNet`, 1.93 M parameters, 20 epochs on 50,000 synthetic plates, scored on
+a 2,000-sample held-out split.
 
-| | |
+| Metric | Result |
 |---|---|
 | Full-plate exact match | **83.6%** |
 | Plate colour (7-way) | **97.9%** |
@@ -206,35 +250,40 @@ scored on a 2,000-sample held-out split:
 | Degraded crops (quality < 0.4) | 51.4% |
 | Plates ≥ 130 px wide | 98.5% |
 | Plates 40–60 px wide | 54.9% |
+| Single-row / two-row | 70.2% / 94.9% |
+| False positives at HIGH confidence | **2.2%** (target ≤ 0.5% — not met) |
 
-Two results that matter more than the headline:
+## What the research found
 
-- **Single-row plates score 70.2% against two-row plates' 94.9%.** Per-glyph
-  geometry explains part of it (a single-row plate packs ~8 glyphs across its
-  width against ~4 per row), but the gap survives controlling for that, so the
-  cause is not yet established. Recorded as unresolved rather than patched.
-- **The HIGH-confidence false-positive rate is 2.2%, against a 0.5% target.**
-  That criterion is not met. It is the most operationally important number here,
-  because a wrong plate asserted confidently is what puts the wrong person in
-  front of a magistrate.
+The project was designed around one idea: that constraining the decoder to the
+grammar of legal Nepali plates, and using plate colour as a prior, would do the
+heavy lifting on degraded images. **Measured on the trained model, neither
+improves accuracy** — the grammar is worth +0.001 over plain greedy decoding
+and the colour prior 0.000, because a model trained only on legal plates has
+already learned the grammar from the data.
 
-## Honesty about what is and isn't proven
+Both mechanisms are kept, for reasons that survived measurement: 10% of greedy
+outputs are not legal plates at all and cannot serve as a database key, and the
+grammar is what makes confidence bands meaningful (HIGH 97.8%, REJECT 0%). The
+full ablation, the reasoning, and the correction of earlier claims are in
+[`docs/research/findings-phase2.md`](docs/research/findings-phase2.md). It is
+the most important document in the repository.
 
-Everything above is measured on **synthetic data from the same generator the
-model trained on**. It should be read as an upper bound on real-world
-performance, not a forecast of it. No claim here has been validated against real
-Nepali road footage, because the evaluation set to do that with does not exist
-and has to be built (Phase 1.7). The recogniser also currently renders training
-data in fallback typefaces rather than FE-Schrift (Phase 1.9).
+## Documentation
 
-For calibration: the winning entry in the ICPR 2026 low-resolution plate
-competition scored **82.13%**. Treat any ANPR claiming 99% on degraded imagery
-with suspicion — including this one.
+| | |
+|---|---|
+| [Delivery plan](docs/PLAN.md) | Phases, deliverables, acceptance criteria, per-item status |
+| [Architecture](docs/architecture.md) | Edge → Ingest → Screen → Exploit, and why |
+| [Security & privacy](docs/security-and-privacy.md) | Threat model, Privacy Act 2075 obligations, deliberate limits |
+| [Plate specification](docs/research/plate-specification.md) | Both plate systems in full, with sources |
+| [Prior art](docs/research/prior-art.md) | What exists in Nepal and globally, and where the gap is |
+| [Dataset survey](docs/research/datasets.md) | Why synthetic data, and what real data still has to be collected |
+| [Phase 2 findings](docs/research/findings-phase2.md) | The ablation that disproved the headline claim |
+| [Deployment](deploy/README.md) | Single-site Compose, secrets, edge nodes, Jetson |
 
----
+Each package and service has its own README with its design positions.
 
 ## Licence
 
-Apache-2.0. Dependencies are permissive-licence-only by policy — AGPL components
-such as Ultralytics YOLO are excluded from release builds, because a copyleft
-obligation is a procurement blocker for a government deployment.
+Apache-2.0. Dependencies are permissive-licence-only by policy.
